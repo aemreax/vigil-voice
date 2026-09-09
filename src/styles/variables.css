@@ -1,0 +1,69 @@
+:root {
+  /* Colors - Dark Theme (Default) */
+  --bg-base: #0f1115;
+  --bg-panel: #161920;
+  --bg-card: #1c1f28;
+  --bg-hover: #252a36;
+  --bg-active: #313745;
+  
+  --text-primary: #f0f2f5;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --border-color: #2e3646;
+  --border-light: #3f4a5c;
+  
+  --brand-primary: #3b82f6;
+  --brand-secondary: #6366f1;
+  --brand-accent: #0ea5e9;
+  
+  --status-safe: #10b981;
+  --status-low: #3b82f6;
+  --status-medium: #f59e0b;
+  --status-high: #f97316;
+  --status-critical: #ef4444;
+  
+  --status-safe-bg: rgba(16, 185, 129, 0.1);
+  --status-low-bg: rgba(59, 130, 246, 0.1);
+  --status-medium-bg: rgba(245, 158, 11, 0.1);
+  --status-high-bg: rgba(249, 115, 22, 0.1);
+  --status-critical-bg: rgba(239, 68, 68, 0.15);
+  
+  /* Spacing */
+  --gap-xs: 5px;
+  --gap-sm: 10px;
+  --gap-md: 15px;
+  --gap-lg: 20px;
+  --gap-xl: 25px;
+  --gap-xxl: 30px;
+  
+  /* Radii */
+  --radius-base: 5px;
+  --radius-sm: 3px;
+  --radius-lg: 5px; /* keeping it tight as requested */
+  
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+[data-theme='light'] {
+  --bg-base: #f8fafc;
+  --bg-panel: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: #e2e8f0;
+  --bg-active: #cbd5e1;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --border-color: #cbd5e1;
+  --border-light: #e2e8f0;
+  
+  --status-safe-bg: rgba(16, 185, 129, 0.1);
+  --status-low-bg: rgba(59, 130, 246, 0.1);
+  --status-medium-bg: rgba(245, 158, 11, 0.1);
+  --status-high-bg: rgba(249, 115, 22, 0.1);
+  --status-critical-bg: rgba(239, 68, 68, 0.15);
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Vigil Voice",
+  "description": "AI-Powered Real-Time Detection and Prevention of Voice Cloning Impersonation Attacks (SIH26104)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

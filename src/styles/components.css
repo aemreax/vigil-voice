@@ -1,0 +1,130 @@
+/* Cards */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-base);
+  padding: var(--gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--gap-xs);
+}
+
+.card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-xs);
+  padding: var(--gap-xs) var(--gap-sm);
+  border-radius: var(--radius-base);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background-color: var(--brand-primary);
+  color: white;
+}
+.btn-primary:hover {
+  background-color: var(--brand-secondary);
+}
+
+.btn-secondary {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.btn-secondary:hover {
+  background-color: var(--bg-active);
+}
+
+.btn-danger {
+  background-color: var(--status-critical);
+  color: white;
+}
+.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+.btn-outline-danger {
+  background-color: transparent;
+  color: var(--status-critical);
+  border-color: var(--status-critical);
+}
+.btn-outline-danger:hover {
+  background-color: var(--status-critical-bg);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-safe { background-color: var(--status-safe-bg); color: var(--status-safe); }
+.badge-low { background-color: var(--status-low-bg); color: var(--status-low); }
+.badge-medium { background-color: var(--status-medium-bg); color: var(--status-medium); }
+.badge-high { background-color: var(--status-high-bg); color: var(--status-high); }
+.badge-critical { background-color: var(--status-critical-bg); color: var(--status-critical); border: 1px solid var(--status-critical); }
+.badge-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
+
+/* Table */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.data-table th, .data-table td {
+  padding: var(--gap-sm);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+}
+.data-table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  background-color: var(--bg-panel);
+}
+.data-table tr:hover td {
+  background-color: var(--bg-hover);
+}
+
+/* Inputs */
+.input {
+  background-color: var(--bg-base);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: var(--gap-sm);
+  border-radius: var(--radius-base);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input:focus {
+  border-color: var(--brand-primary);
+}
