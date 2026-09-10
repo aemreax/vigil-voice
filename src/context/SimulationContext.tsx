@@ -33,10 +33,12 @@ export interface CallEvent {
 interface SimulationContextType {
   activeCalls: Call[];
   alerts: CallEvent[];
-  startAttackSimulation: (type: string) => void;
+  startAttackSimulation: (file?: { name: string, fileData?: string }) => void;
   isSimulatingAttack: boolean;
   blockTransaction: (callId: string) => void;
   requireVerification: (callId: string) => void;
+  rdStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
+  rdData: any;
   systemHealth: {
     inferenceLatency: number;
     cpu: number;
@@ -108,6 +110,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isSimulatingAttack, setIsSimulatingAttack] = useState(false);
   const [attackStep, setAttackStep] = useState(0);
   const [attackCallId, setAttackCallId] = useState<string | null>(null);
+  const [rdStatus, setRdStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'READY'>('CONNECTING');
+  const [rdData, setRdData] = useState<any>(null);
   
   const [systemHealth, setSystemHealth] = useState({
     inferenceLatency: 42,
@@ -120,6 +124,22 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     aiDetected: 1284,
     prevented: 1250
   });
+
+  // Check RD API Status on Mount
+  useEffect(() => {
+    fetch('/api/rd-status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'connected') {
+          setRdStatus('READY');
+        } else {
+          setRdStatus('ERROR');
+        }
+      })
+      .catch(() => {
+        setRdStatus('ERROR');
+      });
+  }, []);
 
   // Background random simulation
   useEffect(() => {
@@ -153,17 +173,17 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Directed Attack Simulation Engine
   useEffect(() => {
-    if (!isSimulatingAttack || !attackCallId) return;
+    if (!isSimulatingAttack || !attackCallId || attackStep === 0) return;
     
     const interval = setInterval(() => {
       setAttackStep(prev => prev + 1);
     }, 2500); // Progress attack every 2.5 seconds
     
     return () => clearInterval(interval);
-  }, [isSimulatingAttack, attackCallId]);
+  }, [isSimulatingAttack, attackCallId, attackStep]);
 
   useEffect(() => {
-    if (!isSimulatingAttack || !attackCallId) return;
+    if (!isSimulatingAttack || !attackCallId || attackStep === 0) return;
     
     const ts = Date.now();
     setActiveCalls(prev => prev.map(call => {
@@ -171,51 +191,70 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       let updatedCall = { ...call };
       const newEvents = [...call.events];
+      const isSafe = rdData?.threatLevel === 'SAFE';
       
       switch (attackStep) {
         case 1:
-          updatedCall.riskScore = 24;
-          updatedCall.threatLevel = 'LOW';
-          newEvents.push({ timestamp: ts, message: 'Audio stream analyzed', type: 'INFO' });
+          updatedCall.riskScore = isSafe ? 15 : 24;
+          updatedCall.threatLevel = isSafe ? 'SAFE' : 'LOW';
+          newEvents.push({ timestamp: ts, message: `Audio stream ingested and processed via Model`, type: 'INFO' });
           break;
         case 2:
-          updatedCall.riskScore = 47;
-          updatedCall.aiProbability = 34.5;
-          updatedCall.humanProbability = 65.5;
-          updatedCall.threatLevel = 'MEDIUM';
-          newEvents.push({ timestamp: ts, message: 'Acoustic anomaly detected in lower frequencies', type: 'WARNING' });
+          if (isSafe) {
+            updatedCall.riskScore = rdData.riskScore;
+            updatedCall.aiProbability = rdData.aiProbability;
+            updatedCall.humanProbability = 100 - rdData.aiProbability;
+            updatedCall.threatLevel = 'SAFE';
+            updatedCall.verificationStatus = 'VERIFIED';
+            newEvents.push({ timestamp: ts, message: 'Acoustic signature verified as HUMAN', type: 'SUCCESS' });
+            setIsSimulatingAttack(false); // End simulation naturally
+          } else {
+            updatedCall.riskScore = 47;
+            updatedCall.aiProbability = 34.5;
+            updatedCall.humanProbability = 65.5;
+            updatedCall.threatLevel = 'MEDIUM';
+            newEvents.push({ timestamp: ts, message: 'Acoustic anomaly detected in lower frequencies', type: 'WARNING' });
+          }
           break;
         case 3:
-          updatedCall.riskScore = 71;
-          updatedCall.aiProbability = 68.2;
-          updatedCall.humanProbability = 31.8;
-          updatedCall.threatLevel = 'HIGH';
-          newEvents.push({ timestamp: ts, message: 'Speaker identity mismatch detected', type: 'CRITICAL' });
+          if (!isSafe) {
+            updatedCall.riskScore = 71;
+            updatedCall.aiProbability = 68.2;
+            updatedCall.humanProbability = 31.8;
+            updatedCall.threatLevel = 'HIGH';
+            newEvents.push({ timestamp: ts, message: 'Speaker identity mismatch detected', type: 'CRITICAL' });
+          }
           break;
         case 4:
-          updatedCall.riskScore = 93;
-          updatedCall.aiProbability = 96.8;
-          updatedCall.humanProbability = 3.2;
-          updatedCall.threatLevel = 'CRITICAL';
-          updatedCall.transaction = { amount: 850000, type: 'Bank Transfer', status: 'PENDING' };
-          newEvents.push({ timestamp: ts, message: 'High-value transaction requested', type: 'CRITICAL' });
-          setAlerts(prev => [{ timestamp: ts, message: `CRITICAL: Voice cloning attack detected on ${call.id}`, type: 'CRITICAL' }, ...prev]);
+          if (!isSafe) {
+            updatedCall.riskScore = rdData ? rdData.riskScore : 93;
+            updatedCall.aiProbability = rdData ? rdData.aiProbability : 96.8;
+            updatedCall.humanProbability = 100 - updatedCall.aiProbability;
+            updatedCall.threatLevel = 'CRITICAL';
+            updatedCall.transaction = { amount: 850000, type: 'Bank Transfer', status: 'PENDING' };
+            newEvents.push({ timestamp: ts, message: 'High-value transaction requested', type: 'CRITICAL' });
+            setAlerts(prev => [{ timestamp: ts, message: `CRITICAL: Voice cloning attack detected on ${call.id}`, type: 'CRITICAL' }, ...prev]);
+          }
           break;
         case 5:
-          updatedCall.verificationStatus = 'REQUIRED';
-          newEvents.push({ timestamp: ts, message: 'Secondary verification required by policy', type: 'INFO' });
+          if (!isSafe) {
+            updatedCall.verificationStatus = 'REQUIRED';
+            newEvents.push({ timestamp: ts, message: 'Secondary verification required by policy', type: 'INFO' });
+          }
           break;
         case 6:
-          updatedCall.status = 'BLOCKED';
-          if (updatedCall.transaction) updatedCall.transaction.status = 'BLOCKED';
-          newEvents.push({ timestamp: ts, message: 'Transaction BLOCKED - Attack Prevented', type: 'SUCCESS' });
-          setAlerts(prev => [{ timestamp: ts, message: `SUCCESS: Attack prevented on ${call.id}`, type: 'SUCCESS' }, ...prev]);
-          setIsSimulatingAttack(false); // End simulation
-          setAnalytics(prev => ({
-             ...prev, 
-             aiDetected: prev.aiDetected + 1,
-             prevented: prev.prevented + 1
-          }));
+          if (!isSafe) {
+            updatedCall.status = 'BLOCKED';
+            if (updatedCall.transaction) updatedCall.transaction.status = 'BLOCKED';
+            newEvents.push({ timestamp: ts, message: 'Transaction BLOCKED - Attack Prevented', type: 'SUCCESS' });
+            setAlerts(prev => [{ timestamp: ts, message: `SUCCESS: Attack prevented on ${call.id}`, type: 'SUCCESS' }, ...prev]);
+            setIsSimulatingAttack(false); // End simulation
+            setAnalytics(prev => ({
+               ...prev, 
+               aiDetected: prev.aiDetected + 1,
+               prevented: prev.prevented + 1
+            }));
+          }
           break;
       }
       
@@ -223,10 +262,13 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return updatedCall;
     }));
     
-  }, [attackStep, isSimulatingAttack, attackCallId]);
+  }, [attackStep, isSimulatingAttack, attackCallId, rdData]);
 
-  const startAttackSimulation = useCallback((type: string) => {
+  const startAttackSimulation = useCallback(async (testFile?: { name: string, fileData?: string }) => {
     const newCallId = 'VC-' + Math.floor(10000 + Math.random() * 90000);
+    const fileName = testFile?.name;
+    const fileDataPayload = testFile?.fileData;
+    
     const newCall: Call = {
       id: newCallId,
       callerId: '+91 ' + Math.floor(7000000000 + Math.random() * 2999999999).toString().replace(/(\d{5})(\d{5})/, '$1 $2'),
@@ -241,13 +283,63 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       verificationStatus: 'PENDING',
       status: 'ACTIVE',
       language: 'English',
-      events: [{ timestamp: Date.now(), message: 'Call connected', type: 'INFO' }]
+      events: [{ timestamp: Date.now(), message: fileName ? `Incoming call connected (Audio: ${fileName})` : 'Call connected', type: 'INFO' }]
     };
     
     setActiveCalls(prev => [newCall, ...prev]);
     setAttackCallId(newCallId);
     setAttackStep(0);
     setIsSimulatingAttack(true);
+    
+    // Add visual feedback since the real API takes time
+    if (testFile?.fileData) {
+      setActiveCalls(prev => prev.map(call => {
+        if (call.id === newCallId) {
+          return {
+            ...call,
+            events: [...call.events, { timestamp: Date.now() + 100, message: 'Transmitting audio to Model...', type: 'INFO' }]
+          };
+        }
+        return call;
+      }));
+    }
+
+    // Call the backend API proxy for Reality Defender
+    setRdStatus('CONNECTING');
+    setRdData(null);
+    try {
+      const response = await fetch('/api/analyze-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          callId: newCallId, 
+          fileName: fileName,
+          fileData: fileDataPayload
+        })
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+         setRdStatus('CONNECTED');
+         setRdData(data.analysis);
+         setActiveCalls(prev => prev.map(call => {
+           if (call.id === newCallId) {
+             return {
+               ...call,
+               events: [...call.events, { timestamp: Date.now(), message: 'Model processing complete', type: 'SUCCESS' }]
+             };
+           }
+           return call;
+         }));
+      } else {
+         setRdStatus('ERROR');
+      }
+    } catch (err) {
+      setRdStatus('ERROR');
+    }
+    
+    // Start the timeline progression
+    setAttackStep(1);
+
   }, []);
 
   const blockTransaction = useCallback((callId: string) => {
@@ -285,6 +377,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isSimulatingAttack,
       blockTransaction,
       requireVerification,
+      rdStatus,
+      rdData,
       systemHealth,
       analytics
     }}>

@@ -65,10 +65,6 @@ export const DashboardLayout = () => {
                 <option>SBI - North Zone</option>
               </select>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-xs)', fontSize: '0.75rem' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--status-safe)' }}></div>
-              <span style={{ color: 'var(--text-muted)' }}>PROD_ENV_IN</span>
-            </div>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-md)' }}>

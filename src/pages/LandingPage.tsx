@@ -11,7 +11,7 @@ export const LandingPage = () => {
       <header style={{ padding: 'var(--gap-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
           <ShieldAlert size={24} color="var(--brand-primary)" />
-          <span style={{ fontWeight: 700, fontSize: '1.25rem', letterSpacing: '0.05em' }}>VoiceSec AI</span>
+          <span style={{ fontWeight: 700, fontSize: '1.25rem', letterSpacing: '0.05em' }}>Vigil Voice</span>
         </div>
         <div style={{ display: 'flex', gap: 'var(--gap-md)' }}>
           <Button variant="secondary" onClick={() => navigate('/login')}>Login</Button>

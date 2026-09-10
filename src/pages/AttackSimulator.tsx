@@ -1,26 +1,94 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card, CardHeader, Button, Badge } from '../components/ui';
 import { useSimulation } from '../context/SimulationContext';
-import { Play, Shield, AlertOctagon, Lock, Fingerprint, Crosshair, CheckCircle, Activity } from 'lucide-react';
+import { Play, Shield, AlertOctagon, Lock, Fingerprint, Crosshair, CheckCircle, Activity, Server, UploadCloud, FileAudio, MoreVertical, Trash2 } from 'lucide-react';
+
+interface LibraryFile {
+  id: string;
+  name: string;
+  fileData: string;
+}
 
 export const AttackSimulator = () => {
-  const { isSimulatingAttack, startAttackSimulation, activeCalls, alerts, blockTransaction } = useSimulation();
+  const { isSimulatingAttack, startAttackSimulation, activeCalls, alerts, blockTransaction, rdStatus, rdData } = useSimulation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [libraryFiles, setLibraryFiles] = useState<LibraryFile[]>([]);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
   const targetCall = activeCalls[0];
   const isAttackPrevented = targetCall?.status === 'BLOCKED';
+
+  // Load from backend on mount
+  useEffect(() => {
+    fetch('/api/library')
+      .then(res => res.json())
+      .then(data => setLibraryFiles(data))
+      .catch(console.error);
+  }, []);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (fileList && fileList.length > 0) {
+      const newFiles = Array.from(fileList);
+      
+      for (const file of newFiles) {
+        // Prevent obvious duplicates in local state
+        if (libraryFiles.some(f => f.name === file.name)) continue;
+
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const fileData = reader.result as string;
+          const id = Math.random().toString(36).substring(7);
+          const newLibFile = { id, name: file.name, fileData };
+          
+          setLibraryFiles(prev => {
+             if (prev.some(f => f.name === file.name)) return prev;
+             return [...prev, newLibFile];
+          });
+          
+          await fetch('/api/library', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newLibFile)
+          }).catch(console.error);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    // Reset input safely after a tick so it doesn't interrupt the event
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }, 100);
+  };
+
+  const handleStartClick = () => {
+    fileInputRef.current?.click();
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap-md)', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Command Center: Attack Simulator</h2>
-        <Button 
-          variant={isSimulatingAttack ? 'secondary' : 'primary'} 
-          icon={Play}
-          onClick={() => startAttackSimulation('VOICE_CLONING')}
-          disabled={isSimulatingAttack || isAttackPrevented}
-        >
-          {isSimulatingAttack ? 'Simulation Running...' : 'START LIVE SIMULATION'}
-        </Button>
+        <div>
+          <input 
+            type="file" 
+            accept="audio/*" 
+            multiple
+            ref={fileInputRef} 
+            onChange={handleFileSelect} 
+            style={{ display: 'none' }} 
+          />
+          <Button 
+            variant="primary" 
+            icon={UploadCloud}
+            onClick={handleStartClick}
+          >
+            ADD TEST AUDIO
+          </Button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: 'var(--gap-md)', flex: 1, height: 'calc(100vh - 120px)' }}>
@@ -112,6 +180,82 @@ export const AttackSimulator = () => {
         
         {/* Right Sidebar: Action / Verification & Widgets */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap-md)' }}>
+          <Card>
+            <CardHeader title="Model Response" icon={Server} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap-sm)', marginTop: 'var(--gap-sm)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Model Status</span>
+                <Badge variant={rdStatus === 'CONNECTED' || rdStatus === 'READY' ? 'safe' : rdStatus === 'ERROR' ? 'critical' : rdStatus === 'CONNECTING' ? 'medium' : 'default'}>
+                  {rdStatus}
+                </Badge>
+              </div>
+              {rdData && (
+                <div style={{ padding: 'var(--gap-sm)', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--radius-base)', fontSize: '0.875rem' }}>
+                   <div style={{ color: 'var(--brand-primary)', marginBottom: '4px', fontWeight: 600 }}>LIVE ANALYSIS PAYLOAD:</div>
+                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                     <span>Threat Level:</span>
+                     <span style={{ fontWeight: 600, color: 'var(--status-critical)' }}>{rdData.threatLevel}</span>
+                   </div>
+                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                     <span>Engine Confidence:</span>
+                     <span style={{ fontFamily: 'var(--font-mono)' }}>{rdData.aiProbability.toFixed(1)}%</span>
+                   </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Audio Test Library" icon={FileAudio} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: 'var(--gap-sm)', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+              {libraryFiles.length === 0 ? (
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center', padding: 'var(--gap-md)' }}>
+                  No files loaded. Click "Add Test Audio".
+                </div>
+              ) : (
+                libraryFiles.map((file) => (
+                  <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', backgroundColor: 'var(--bg-hover)', borderRadius: 'var(--radius-base)', position: 'relative' }}>
+                    <span style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }} title={file.name}>
+                      {file.name}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button 
+                        onClick={() => { setActiveMenuId(null); startAttackSimulation(file); }}
+                        disabled={isSimulatingAttack || rdStatus === 'CONNECTING'}
+                        style={{ background: 'var(--brand-primary)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 600, cursor: (isSimulatingAttack || rdStatus === 'CONNECTING') ? 'not-allowed' : 'pointer', opacity: (isSimulatingAttack || rdStatus === 'CONNECTING') ? 0.5 : 1 }}
+                      >
+                        Analyze
+                      </button>
+                      <button 
+                        onClick={() => setActiveMenuId(activeMenuId === file.id ? null : file.id)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}
+                      >
+                        <MoreVertical size={16} color="var(--text-secondary)" />
+                      </button>
+                    </div>
+                    
+                    {activeMenuId === file.id && (
+                      <div style={{ position: 'absolute', top: '100%', right: '0', zIndex: 10, background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-base)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '4px', minWidth: '120px' }}>
+                        <button 
+                          onClick={async () => {
+                            setActiveMenuId(null);
+                            setLibraryFiles(prev => prev.filter(f => f.id !== file.id));
+                            await fetch(`/api/library/${file.id}`, { method: 'DELETE' });
+                          }}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'transparent', border: 'none', color: 'var(--status-critical)', cursor: 'pointer', fontSize: '0.875rem', borderRadius: 'var(--radius-sm)' }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--status-critical-bg)'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
           <Card>
             <CardHeader title="System Response" icon={Fingerprint} />
             
